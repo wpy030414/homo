@@ -1,0 +1,73 @@
+<!doctype html>
+<!-- E2E 夹具：headless 浏览器渲染用，双库（legacy homo.js + 短表示 homo.short.js）
+     同步快照，浏览器内官方 eval 环境校验数值，#结果 输出 JSON 供断言。 -->
+<html>
+  <body>
+    <input id="学弟" type="number" />
+    <div id="恶臭"></div>
+    <div id="结果"></div>
+    <script src="../homo.js"></script>
+    <script src="../homo.short.js"></script>
+    <script>
+      // 固定案例：招牌数 + 极小小数（评审回归集）+ 大数边界
+      const cases = [
+        1919810, 229027, 1919, 114514, 0.25, -42, 1e-309, 5e-324,
+        9007199254740991,
+      ]
+      const F = (n) => {
+        if (n < 0 || n !== Math.floor(n) || n > 170) throw 0
+        let r = 1
+        for (let i = 2; i <= n; i++) r *= i
+        return r
+      }
+      const SQ = (x) => {
+        const r = Math.sqrt(x),
+          rr = Math.round(r)
+        return Math.abs(r - rr) <= 1e-9 * Math.max(1, Math.abs(rr)) ? rr : r
+      }
+      const FL = Math.floor,
+        POW = (a, b) => a ** b,
+        FLSQ = (x) => Math.floor(Math.sqrt(x))
+      const 验证 = (s) => {
+        try {
+          return new Function(
+            "F",
+            "SQ",
+            "FL",
+            "POW",
+            "FLSQ",
+            "return (" + s + ")",
+          )(F, SQ, FL, POW, FLSQ)
+        } catch (e) {
+          return "ERR:" + e.message
+        }
+      }
+
+      // legacy 无 evalStr，其展示轨可直接 eval（纯四则 + 数字字面量）
+      const legacyEval = (s) => {
+        try {
+          return eval(s.replace(/\^/g, "**"))
+        } catch (e) {
+          return "ERR:" + e.message
+        }
+      }
+
+      const 收集 = {}
+      for (const c of cases) {
+        const legacyS = homo(c),
+          legacyV = legacyEval(legacyS)
+        const shortS = homoShort(c),
+          shortV = homoShort.evalStr(c)
+        收集[c] = {
+          legacy: { s: legacyS, v: legacyV },
+          short: { display: shortS, evalStr: shortV, v: 验证(shortV) },
+        }
+      }
+      结果.textContent = JSON.stringify({
+        收集,
+        shortLoaded: typeof homoShort === "function",
+        legacyLoaded: typeof homo === "function",
+      })
+    </script>
+  </body>
+</html>
